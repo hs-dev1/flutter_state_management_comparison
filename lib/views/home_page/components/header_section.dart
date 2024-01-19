@@ -40,18 +40,7 @@ class _HeaderSectionState extends State<HeaderSection> {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           )
-          // SizedBox(
-          //   child: Row(
-          //     children: [
-          //       Image.asset(MyAssets.addIcon, width: 24,),
-          //       Padding(
-          //         padding: const EdgeInsets.symmetric(horizontal: 20),
-          //         child: Image.asset(MyAssets.heartIcon, width: 24,),
-          //       ),
-          //       Image.asset(MyAssets.messageIcon, width: 24,),
-          //     ],
-          //   ),
-          // )
+          
         ],
       ),
     );
