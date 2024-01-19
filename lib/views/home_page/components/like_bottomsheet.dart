@@ -22,7 +22,7 @@ class _LikeButtonSheetState extends State<LikeButtonSheet> {
           value: widget.posts[index].likes == 1,
           onChanged: (value) {
             widget.onLikedUpdated(value, index);
-            setState(() {});
+            // setState(() {});
           },
         ),
         leading: CircleAvatar(backgroundImage: NetworkImage(widget.posts[index].profilePicture)),

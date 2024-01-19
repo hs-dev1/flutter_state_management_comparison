@@ -97,7 +97,7 @@ class _PostSectionState extends State<PostSection> {
                       );
                     } else {
                       // Handle other cases, e.g., if the image failed to load
-                      return const Center(
+                      return Center(
                         child: Text('Failed to load image'),
                       );
                     }

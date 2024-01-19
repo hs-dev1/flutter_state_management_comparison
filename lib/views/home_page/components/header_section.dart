@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_state_management_comparison/models/post.dart';
 import 'package:flutter_state_management_comparison/views/home_page/components/like_bottomsheet.dart';
+import 'package:flutter_state_management_comparison/widgets/inherited_home_widget.dart';
 
 import '../../../constants/assets.dart';
 
 class HeaderSection extends StatefulWidget {
-  final List<Post> posts;
   final Function(bool value, int index) onLikedUpdated;
 
-  const HeaderSection({Key? key, required this.posts, required this.onLikedUpdated})
-      : super(key: key);
+  const HeaderSection({Key? key, required this.onLikedUpdated}) : super(key: key);
 
   @override
   State<HeaderSection> createState() => _HeaderSectionState();
@@ -29,18 +27,28 @@ class _HeaderSectionState extends State<HeaderSection> {
           ),
           TextButton(
             onPressed: () {
+              // showModalBottomSheet(
+              //   context: context,
+              //   builder: (context) => LikeButtonSheet(
+              //     posts: InheritedHomeWidget.of(context)!.posts,
+              //     onLikedUpdated: widget.onLikedUpdated,
+              //   ),
+              // );
               showModalBottomSheet(
                   context: context,
-                  builder: (context) =>
-                      LikeButtonSheet(posts: widget.posts, onLikedUpdated: widget.onLikedUpdated));
+                  builder: (cntxt) => LikeButtonSheet(
+                      posts: InheritedHomeWidget.of(context)!.posts,
+                      onLikedUpdated: widget.onLikedUpdated));
+                      setState(() {
+                        
+                      });
             },
             style: TextButton.styleFrom(foregroundColor: Colors.black),
             child: Text(
-              'Total Like Counter: ${widget.posts.isEmpty ? 0 : widget.posts.map((e) => e.likes).reduce((a, b) => a + b)}',
+              'Total Like Counter: ${InheritedHomeWidget.of(context)!.posts.isEmpty ? 0 : InheritedHomeWidget.of(context)?.posts.map((e) => e.likes).reduce((a, b) => a + b)}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           )
-          
         ],
       ),
     );
