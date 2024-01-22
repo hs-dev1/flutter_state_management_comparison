@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_state_management_comparison/api_service/api_service.dart';
 import 'package:flutter_state_management_comparison/views/home_page/components/header_section.dart';
 import 'package:flutter_state_management_comparison/views/home_page/components/story_listview.dart';
-import 'package:flutter_state_management_comparison/widgets/inherited_home_widget.dart';
+import 'package:flutter_state_management_comparison/widgets/post_provider.dart';
+import 'package:provider/provider.dart';
 
 import 'components/post_section.dart';
 
@@ -23,8 +24,10 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
+    final postProvider = Provider.of<PostProvider>(context, listen: false);
+
     ApiService.getPosts(offset, 3).then((_posts) {
-      InheritedHomeWidget.of(context)?.posts = _posts;
+      postProvider.posts = _posts;
       offset += 10;
       setState(() {});
     });
@@ -34,12 +37,13 @@ class _HomePageState extends State<HomePage> {
           if (_posts.isEmpty) {
             isLoading = false;
           }
-          InheritedHomeWidget.of(context)?.posts.addAll(_posts);
+          postProvider.posts.addAll(_posts);
           offset += 10;
           setState(() {});
         });
       }
     });
+
     super.initState();
   }
 
@@ -60,40 +64,32 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           children: [
             const SizedBox(height: 8),
-            HeaderSection(
-              onLikedUpdated: (value, index) {
-                InheritedHomeWidget.of(context)?.posts[index].likes = !value ? 0 : 1;
-                //setState(() {});
-              },
-            ),
+            HeaderSection(),
             const SizedBox(height: 16),
             Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                itemCount: InheritedHomeWidget.of(context)!.posts.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == InheritedHomeWidget.of(context)?.posts.length && isLoading) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                        ],
-                      ),
-                    );
-                  }
-                  return PostSection(
-                      post: InheritedHomeWidget.of(context)!.posts[index],
+              child: Consumer<PostProvider>(builder: (context, postProvider, widget) {
+                return ListView.builder(
+                  controller: scrollController,
+                  itemCount: postProvider.posts.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == postProvider.posts.length && isLoading) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(),
+                          ],
+                        ),
+                      );
+                    }
+                    return PostSection(
                       index: index,
-                      onLikedUpdated: (index) {
-                        InheritedHomeWidget.of(context)!.posts[index].likes =
-                            InheritedHomeWidget.of(context)!.posts[index].likes == 1 ? 0 : 1;
-                        setState(() {});
-                      });
-                  
-                },
-              ),
+                      post: postProvider.posts[index],
+                    );
+                  },
+                );
+              }),
             )
           ],
         ),
@@ -103,10 +99,13 @@ class _HomePageState extends State<HomePage> {
         children: [
           FloatingActionButton(
             onPressed: () async {
+              final postProvider = Provider.of<PostProvider>(context, listen: false);
+
               await ApiService.getPosts(offset, 3).then((_posts) {
-                InheritedHomeWidget.of(context)?.posts = _posts;
+                postProvider.posts = _posts;
                 offset += 10;
-                setState(() {});
+                postProvider.update();
+                
               });
             },
             child: const Icon(Icons.refresh),

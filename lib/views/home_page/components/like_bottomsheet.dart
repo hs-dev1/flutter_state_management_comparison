@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_state_management_comparison/models/post.dart';
+import 'package:flutter_state_management_comparison/widgets/post_provider.dart';
+import 'package:provider/provider.dart';
 
 class LikeButtonSheet extends StatefulWidget {
-  final List<Post> posts;
-  final Function(bool value, int index) onLikedUpdated;
-
-  const LikeButtonSheet({super.key, required this.posts, required this.onLikedUpdated});
+  const LikeButtonSheet({super.key});
 
   @override
   State<LikeButtonSheet> createState() => _LikeButtonSheetState();
@@ -14,18 +12,23 @@ class LikeButtonSheet extends StatefulWidget {
 class _LikeButtonSheetState extends State<LikeButtonSheet> {
   @override
   Widget build(BuildContext context) {
+    final postProvider = Provider.of<PostProvider>(context, listen: true);
     return ListView.builder(
-      itemCount: widget.posts.length,
+      itemCount: postProvider.posts.length,
       itemBuilder: (context, index) => ListTile(
-        title: Text(widget.posts[index].username),
+        title: Text(postProvider.posts[index].username),
         trailing: Switch(
-          value: widget.posts[index].likes == 1,
+          value: postProvider.posts[index].likes == 1,
           onChanged: (value) {
-            widget.onLikedUpdated(value, index);
+            postProvider.updateLike(index, !value ? 0 : 1);
             // setState(() {});
           },
         ),
-        leading: CircleAvatar(backgroundImage: NetworkImage(widget.posts[index].profilePicture)),
+        leading: CircleAvatar(
+          backgroundImage: NetworkImage(
+            postProvider.posts[index].profilePicture,
+          ),
+        ),
       ),
     );
   }

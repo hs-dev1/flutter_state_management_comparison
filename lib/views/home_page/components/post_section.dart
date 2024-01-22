@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_state_management_comparison/models/post.dart';
 import 'package:flutter_state_management_comparison/views/home_page/components/circular_profile_widget.dart';
+import 'package:flutter_state_management_comparison/widgets/post_provider.dart';
+import 'package:provider/provider.dart';
 
 import '../../../constants/assets.dart';
 
 class PostSection extends StatefulWidget {
-  const PostSection(
-      {Key? key, required this.post, required this.onLikedUpdated, required this.index})
-      : super(key: key);
+  const PostSection({Key? key, required this.post, required this.index}) : super(key: key);
   final Post post;
   final int index;
-  final Function(int) onLikedUpdated;
 
   @override
   State<PostSection> createState() => _PostSectionState();
@@ -110,7 +109,9 @@ class _PostSectionState extends State<PostSection> {
             children: [
               GestureDetector(
                 onTap: () {
-                  widget.onLikedUpdated(widget.index);
+                  final postProvider = Provider.of<PostProvider>(context, listen: false);
+                  postProvider.updateLike(
+                      widget.index, postProvider.posts[widget.index].likes == 1 ? 0 : 1);
                 },
                 child: Image.asset(
                   MyAssets.heartIcon,
@@ -129,24 +130,25 @@ class _PostSectionState extends State<PostSection> {
                 MyAssets.messageIcon,
                 width: 24,
               ),
-              if (post.posts.length != 1) const Spacer(flex: 1),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  post.posts.length,
-                  (index) => Padding(
-                    padding: const EdgeInsets.only(right: 4.0),
-                    child: Container(
-                      width: selectedPostIndex == index ? 6 : 6,
-                      height: selectedPostIndex == index ? 6 : 6,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: selectedPostIndex == index ? Colors.amber : Colors.grey),
+              if (post.posts.length == 1) const Spacer(flex: 1),
+              if (post.posts.length != 1)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    post.posts.length,
+                    (index) => Padding(
+                      padding: const EdgeInsets.only(right: 4.0),
+                      child: Container(
+                        width: selectedPostIndex == index ? 6 : 6,
+                        height: selectedPostIndex == index ? 6 : 6,
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: selectedPostIndex == index ? Colors.amber : Colors.grey),
+                      ),
                     ),
                   ),
                 ),
-              ),
               const Spacer(flex: 2),
               Image.asset(MyAssets.saveIcon, width: 24),
             ],
