@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_state_management_comparison/models/post.dart';
 import 'package:flutter_state_management_comparison/views/home_page/components/circular_profile_widget.dart';
 import 'package:flutter_state_management_comparison/widgets/post_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../constants/assets.dart';
 
@@ -96,7 +96,7 @@ class _PostSectionState extends State<PostSection> {
                       );
                     } else {
                       // Handle other cases, e.g., if the image failed to load
-                      return Center(
+                      return const Center(
                         child: Text('Failed to load image'),
                       );
                     }
@@ -109,9 +109,9 @@ class _PostSectionState extends State<PostSection> {
             children: [
               GestureDetector(
                 onTap: () {
-                  final postProvider = Provider.of<PostProvider>(context, listen: false);
-                  postProvider.updateLike(
-                      widget.index, postProvider.posts[widget.index].likes == 1 ? 0 : 1);
+                  final controller = Get.find<PostController>();
+                  controller.updateLike(
+                      widget.index, controller.posts[widget.index].likes == 1 ? 0 : 1);
                 },
                 child: Image.asset(
                   MyAssets.heartIcon,

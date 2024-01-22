@@ -5,7 +5,7 @@ import 'package:flutter_state_management_comparison/api_service/api_service.dart
 import 'package:flutter_state_management_comparison/views/home_page/components/header_section.dart';
 import 'package:flutter_state_management_comparison/views/home_page/components/story_listview.dart';
 import 'package:flutter_state_management_comparison/widgets/post_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import 'components/post_section.dart';
 
@@ -17,17 +17,15 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // List<Post> posts = [];
+  final controller = Get.put(PostController());
   final ScrollController scrollController = ScrollController();
   bool isLoading = true;
   int offset = 0;
 
   @override
   void initState() {
-    final postProvider = Provider.of<PostProvider>(context, listen: false);
-
     ApiService.getPosts(offset, 3).then((_posts) {
-      postProvider.posts = _posts;
+      controller.posts.value = _posts;
       offset += 10;
       setState(() {});
     });
@@ -37,7 +35,7 @@ class _HomePageState extends State<HomePage> {
           if (_posts.isEmpty) {
             isLoading = false;
           }
-          postProvider.posts.addAll(_posts);
+          controller.posts.addAll(_posts);
           offset += 10;
           setState(() {});
         });
@@ -47,14 +45,6 @@ class _HomePageState extends State<HomePage> {
     super.initState();
   }
 
-  Widget header() {
-    return const Column(
-      children: [
-        StoryListView(),
-        SizedBox(height: 8),
-      ],
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,12 +57,12 @@ class _HomePageState extends State<HomePage> {
             HeaderSection(),
             const SizedBox(height: 16),
             Expanded(
-              child: Consumer<PostProvider>(builder: (context, postProvider, widget) {
+              child: Obx(() {
                 return ListView.builder(
                   controller: scrollController,
-                  itemCount: postProvider.posts.length + 1,
+                  itemCount: controller.posts.length + 1,
                   itemBuilder: (context, index) {
-                    if (index == postProvider.posts.length && isLoading) {
+                    if (index == controller.posts.length && isLoading) {
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8.0),
                         child: Row(
@@ -85,7 +75,7 @@ class _HomePageState extends State<HomePage> {
                     }
                     return PostSection(
                       index: index,
-                      post: postProvider.posts[index],
+                      post: controller.posts[index],
                     );
                   },
                 );
@@ -99,13 +89,10 @@ class _HomePageState extends State<HomePage> {
         children: [
           FloatingActionButton(
             onPressed: () async {
-              final postProvider = Provider.of<PostProvider>(context, listen: false);
-
               await ApiService.getPosts(offset, 3).then((_posts) {
-                postProvider.posts = _posts;
+                controller.posts.value = _posts;
                 offset += 10;
-                postProvider.update();
-                
+                controller.update();
               });
             },
             child: const Icon(Icons.refresh),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_state_management_comparison/views/home_page/components/like_bottomsheet.dart';
 import 'package:flutter_state_management_comparison/widgets/post_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../constants/assets.dart';
 
@@ -15,6 +15,7 @@ class HeaderSection extends StatefulWidget {
 class _HeaderSectionState extends State<HeaderSection> {
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<PostController>();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -30,9 +31,9 @@ class _HeaderSectionState extends State<HeaderSection> {
               setState(() {});
             },
             style: TextButton.styleFrom(foregroundColor: Colors.black),
-            child: Consumer<PostProvider>(builder: (context, postProvider, widget) {
+            child: Obx(() {
               return Text(
-                'Total Like Counter: ${postProvider.posts.isEmpty ? 0 : postProvider.posts.map((e) => e.likes).reduce((a, b) => a + b)}',
+                'Total Like Counter: ${controller.posts.isEmpty ? 0 : controller.posts.map((e) => e.likes).reduce((a, b) => a + b)}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               );
             }),
