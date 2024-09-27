@@ -5,12 +5,10 @@ import '../actions/calculator_actions.dart';
 CalculatorState calculatorReducer(CalculatorState state, dynamic action) {
   if (action is NumberAction) {
     final newInput = (state.currentInput == '0' && action.number != '.') ? action.number : state.currentInput + action.number;
-
     // Prevent multiple decimal points
     if (action.number == '.' && state.currentInput.contains('.')) {
       return state;
     }
-
     return CalculatorState(
       currentInput: newInput,
       result: state.operator == null ? newInput : state.result,
@@ -20,7 +18,6 @@ CalculatorState calculatorReducer(CalculatorState state, dynamic action) {
   } else if (action is OperatorAction) {
     // If there's a pending operation, calculate it first
     final newResult = state.operator != null ? _calculateResult(state.result, state.currentInput, state.operator) : state.currentInput;
-
     return CalculatorState(
       currentInput: '0',
       result: newResult,
@@ -66,7 +63,6 @@ String _calculateResult(String input1, String input2, Operator? operator) {
       default:
         return input2;
     }
-
     return result.toStringAsFixed(8).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
   } catch (e) {
     return 'Error';
