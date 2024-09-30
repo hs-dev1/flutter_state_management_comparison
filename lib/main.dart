@@ -1,29 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
-import 'package:redux_example/models/calculator_state.dart';
-
-import 'reducers/calculator_reducer.dart';
-import 'ui/calculator_page.dart';
+import 'package:redux_example/models/product_state.dart';
+import 'package:redux_example/reducers/product_middlewear.dart';
+import 'package:redux_example/screens/product_page.dart';
+import 'api_service.dart';
 
 void main() {
-  final store = Store<CalculatorState>(
-    calculatorReducer,
-    initialState: CalculatorState(currentInput: '0', result: '0', operator: null),
+  final apiService = ApiService();
+  final store = Store<ProductState>(
+    productReducer,
+    initialState: initialState,
+    middleware: createProductMiddleware(apiService),
   );
+
   runApp(MyApp(store: store));
 }
 
 class MyApp extends StatelessWidget {
-  final Store<CalculatorState> store;
-  const MyApp({super.key, required this.store});
+  final Store<ProductState> store;
+
+  MyApp({required this.store});
 
   @override
   Widget build(BuildContext context) {
-    return StoreProvider<CalculatorState>(
+    return StoreProvider(
       store: store,
-      child: const MaterialApp(
-        home: CalculatorPage(),
+      child: MaterialApp(
+        home: ProductPage(),
       ),
     );
   }
