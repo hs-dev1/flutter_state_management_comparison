@@ -1,233 +1,431 @@
 
-### README for Redux-based Calculator App (Level 3)
+
+# Redux Tutorial - Level 4: API Integration with Products & Recipes
+
+In this tutorial, we'll extend the Redux-based Flutter application by integrating API calls. We will implement two key features:
+- Fetching all products and a single product from an API.
+- Fetching a list of recipes from a different API.
+
+The following APIs are used:
+- Get all products: `https://dummyjson.com/products`
+- Get a single product: `https://dummyjson.com/products/{id}`
+- Get all recipes: `https://dummyjson.com/recipes`
+
+## Overview
+
+By the end of this level, you'll be able to:
+- Structure an application with two separate states (`ProductState` and `RecipeState`), reducers, and middleware.
+- Use `TypedMiddleware` to intercept actions and fetch data asynchronously using the `http` package.
+- Combine multiple reducers and connect them to your `AppState`.
+- Connect your UI to the Redux store and display data fetched from an API.
+
+### App Structure
+The app will be structured into the following parts:
+- **State Management**: Redux will manage two pieces of state: `ProductState` and `RecipeState`.
+- **API Service**: A service to handle all API requests.
+- **Middleware**: We’ll use middleware to dispatch actions for fetching data asynchronously.
+- **Reducers**: Reducers will manage changes to `ProductState` and `RecipeState`.
+- **UI**: Display products and recipes using `StoreConnector` to listen to the Redux state.
 
 ---
 
-### Overview
+## Project Setup
 
-This project demonstrates a simple **Redux-based calculator** using Flutter. We progressively added complexity, building on the foundational skills established in Level 2. This calculator allows users to perform basic arithmetic operations: addition, subtraction, multiplication, and division.
+### 1. Add Dependencies
 
----
+In your `pubspec.yaml`, ensure the following dependencies are added:
 
-### Concepts Covered
-
-1. **Redux State Management**: We use Redux to manage the state of the calculator, which ensures the app's state is predictable and manageable.
-2. **State Mutability**: By using `Store` from Redux, our app can respond to dispatched actions like number inputs, operators, and clearing the calculator.
-3. **State Splitting**: The `CalculatorState` class keeps track of both the current input and the final result, which helps separate the display of the expression from the calculated value.
-4. **Decimal Handling**: We've integrated the `decimal` package to handle decimal operations precisely, avoiding typical floating-point issues.
-
----
-
-### Folder Structure
-
-We split the code into several files to maintain clarity:
-
-- **actions**: Holds action classes for number input, operator input, calculating the result, and clearing the calculator.
-- **models**: Holds the state model (`CalculatorState`) and the enumeration for operators (`Operator`).
-- **reducers**: Contains the core logic of Redux, handling how the state should change based on dispatched actions.
-- **ui**: Contains the `CalculatorPage` widget, which handles the UI rendering and interaction.
-
----
-
-### Code Breakdown
-
-#### 1. **Main Class (`main.dart`)**
-
-The main entry point of the application. We initialize the Redux store with the `calculatorReducer` and the initial state. The app is wrapped with `StoreProvider` to provide global state access.
-
-```dart
-void main() {
-  final store = Store<CalculatorState>(
-    calculatorReducer,
-    initialState: CalculatorState(currentInput: '0', result: '0', operator: null),
-  );
-  runApp(MyApp(store: store));
-}
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_redux: ^0.8.2
+  redux: ^5.0.0
+  http: ^0.13.3
 ```
 
-#### 2. **Calculator State (`calculator_state.dart`)**
+Run `flutter pub get` to install the dependencies.
 
-This defines the structure of our app's state, which keeps track of the current input, the result, and the operator. 
+---
+
+### 2. Define State Classes
+
+We'll manage two separate pieces of state: one for products and another for recipes.
+
+#### `product_state.dart`
 
 ```dart
-class CalculatorState {
-  final String currentInput;
-  final String result;
-  final Operator? operator;
-  final String? error;
-  
-  CalculatorState({
-    required this.currentInput,
-    required this.result,
-    this.operator,
-    this.error,
+class ProductState {
+  final List<dynamic> products;
+  final Map<String, dynamic> selectedProduct;
+  final bool isLoading;
+  final String error;
+
+  ProductState({
+    required this.products,
+    required this.selectedProduct,
+    required this.isLoading,
+    required this.error,
   });
-}
-```
 
-We also define an `Operator` enum to handle the four arithmetic operations.
-
-```dart
-enum Operator {
-  add,
-  subtract,
-  multiply,
-  divide,
-}
-```
-
-#### 3. **Actions (`calculator_actions.dart`)**
-
-Actions define what can happen in the app. For example, `NumberAction` is dispatched when a number button is pressed.
-
-```dart
-class NumberAction {
-  final String number;
-  NumberAction(this.number);
-}
-
-class OperatorAction {
-  final Operator operator;
-  OperatorAction(this.operator);
-}
-
-class CalculateAction {}
-
-class ClearAction {}
-```
-
-#### 4. **Reducer (`calculator_reducer.dart`)**
-
-The reducer defines how the state changes in response to actions. For instance, when a number is pressed, we update the current input.
-
-```dart
-import  'package:decimal/decimal.dart';
-import  '../models/calculator_state.dart';
-import  '../actions/calculator_actions.dart';
-CalculatorState  calculatorReducer(CalculatorState  state, dynamic  action) {
-if (action  is  NumberAction) {
-final  newInput  = (state.currentInput  ==  '0'  &&  action.number  !=  '.') ?  action.number  :  state.currentInput  +  action.number;
-// Prevent multiple decimal points
-if (action.number  ==  '.'  &&  state.currentInput.contains('.')) {
-return  state;
-}
-return  CalculatorState(
-currentInput:  newInput,
-result:  state.operator  ==  null  ?  newInput  :  state.result,
-operator:  state.operator,
-error:  null,
-);} else  if (action  is  OperatorAction) {
-// If there's a pending operation, calculate it first
-final  newResult  =  state.operator  !=  null  ?  _calculateResult(state.result, state.currentInput, state.operator) :  state.currentInput;
-return  CalculatorState(
-currentInput:  '0',
-result:  newResult,
-operator:  action.operator,
-error:  null,
-);
-} else  if (action  is  CalculateAction) {
-final  result  =  _calculateResult(state.result, state.currentInput, state.operator);
-return  CalculatorState(
-currentInput:  result,
-result:  result,
-operator:  null,
-error:  null,
-);
-} else  if (action  is  ClearAction) {
-return  CalculatorState(currentInput:  '0', result:  '0', operator:  null, error:  null);
-}
-return  state;
-}
-String  _calculateResult(String  input1, String  input2, Operator?  operator) {
-try {
-final  num1  =  Decimal.parse(input1);
-final  num2  =  Decimal.parse(input2);
-Decimal  result;  
-switch (operator) {
-case  Operator.add:
-result  =  num1  +  num2;
-break;
-case  Operator.subtract:
-result  =  num1  -  num2;
-break;
-case  Operator.multiply:
-result  =  num1  *  num2;
-break;
-case  Operator.divide:
-if (num2  ==  Decimal.zero) {
-throw  Exception('Division by zero');
-}
-result  = (num1  /  num2).toDecimal();
-break;
-default:
-return  input2;
-}
-return  result.toStringAsFixed(8).replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
-} catch (e) {
-return  'Error';
-}}
-```
-
-The `calculatorReducer` handles four main actions: number inputs, operator selection, calculation, and clearing the calculator.
-
-#### 5. **UI (`calculator_page.dart`)**
-
-The UI is built using Flutter's `StoreConnector` to connect the UI to the Redux store. We display both the current input and the result.
-
-- **Current Input Display**: Shows the expression being typed (e.g., "7 + 6").
-- **Result Display**: Shows the calculated result (e.g., "= 13").
-
-```dart
-StoreConnector<CalculatorState, String>(
-  converter: (store) => store.state.currentInput,
-  builder: (context, currentInput) {
-    return Text(
-      currentInput,
-      style: TextStyle(fontSize: 36.0),
+  factory ProductState.initial() {
+    return ProductState(
+      products: [],
+      selectedProduct: {},
+      isLoading: false,
+      error: '',
     );
-  },
-);
+  }
+}
 ```
 
-#### Number Pad and Operator Buttons
-
-The number and operator buttons dispatch actions based on user input.
+#### `recipe_state.dart`
 
 ```dart
-Widget _buildButton(BuildContext context, String text) {
-  return StoreConnector<CalculatorState, VoidCallback>(
-    converter: (store) {
-      return () {
-        if (text == '=') {
-          store.dispatch(CalculateAction());
-        } else if (text == '+') {
-          store.dispatch(OperatorAction(Operator.add));
-        } 
-        // Handle other buttons...
-      };
-    },
-    builder: (context, callback) {
-      return ElevatedButton(
-        onPressed: callback,
-        child: Text(text, style: TextStyle(fontSize: 24)),
-      );
-    },
+class RecipeState {
+  final List<dynamic> recipes;
+  final bool isLoading;
+  final String error;
+
+  RecipeState({
+    required this.recipes,
+    required this.isLoading,
+    required this.error,
+  });
+
+  factory RecipeState.initial() {
+    return RecipeState(
+      recipes: [],
+      isLoading: false,
+      error: '',
+    );
+  }
+}
+```
+
+---
+
+### 3. Create API Service
+
+This service handles the API requests for products and recipes.
+
+#### `api_service.dart`
+
+```dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+class ApiService {
+  final baseUrl = 'https://dummyjson.com';
+
+  Future<List<dynamic>> fetchAllProducts() async {
+    final response = await http.get(Uri.parse('$baseUrl/products'));
+    if (response.statusCode == 200) {
+      return json.decode(response.body)['products'];
+    } else {
+      throw Exception('Failed to load products');
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchProduct(int id) async {
+    final response = await http.get(Uri.parse('$baseUrl/products/$id'));
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to load product');
+    }
+  }
+
+  Future<List<dynamic>> fetchAllRecipes() async {
+    final response = await http.get(Uri.parse('$baseUrl/recipes'));
+    if (response.statusCode == 200) {
+      return json.decode(response.body)['recipes'];
+    } else {
+      throw Exception('Failed to load recipes');
+    }
+  }
+}
+```
+
+---
+
+### 4. Set up Middleware
+
+Middleware will handle the asynchronous API requests by dispatching success or error actions.
+
+#### `product_middleware.dart`
+
+```dart
+import 'package:redux/redux.dart';
+import 'product_actions.dart';
+import 'product_state.dart';
+import '../api_service.dart';
+
+List<Middleware<ProductState>> createProductMiddleware(ApiService apiService) {
+  return [
+    TypedMiddleware<ProductState, FetchProductsAction>(
+      (store, action, next) async {
+        next(action);
+        try {
+          final products = await apiService.fetchAllProducts();
+          store.dispatch(FetchProductsSuccessAction(products));
+        } catch (error) {
+          store.dispatch(FetchProductsErrorAction(error.toString()));
+        }
+      },
+    ),
+    TypedMiddleware<ProductState, FetchProductAction>(
+      (store, action, next) async {
+        next(action);
+        try {
+          final product = await apiService.fetchProduct(action.id);
+          store.dispatch(FetchProductSuccessAction(product));
+        } catch (error) {
+          store.dispatch(FetchProductErrorAction(error.toString()));
+        }
+      },
+    ),
+  ];
+}
+```
+
+#### `recipe_middleware.dart`
+
+```dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:redux/redux.dart';
+import 'recipe_actions.dart';
+import 'recipe_state.dart';
+
+void recipeMiddleware(Store<RecipeState> store, dynamic action, NextDispatcher next) async {
+  if (action is FetchRecipesAction) {
+    try {
+      final response = await http.get(Uri.parse('https://dummyjson.com/recipes'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body)['recipes'];
+        store.dispatch(FetchRecipesSuccessAction(data));
+      } else {
+        store.dispatch(FetchRecipesFailureAction('Failed to load recipes'));
+      }
+    } catch (error) {
+      store.dispatch(FetchRecipesFailureAction('Error: $error'));
+    }
+  }
+  next(action);
+}
+```
+
+---
+
+### 5. Create Actions
+
+Define actions that will be dispatched for products and recipes.
+
+#### `product_actions.dart`
+
+```dart
+class FetchProductsAction {}
+
+class FetchProductsSuccessAction {
+  final List<dynamic> products;
+  FetchProductsSuccessAction(this.products);
+}
+
+class FetchProductsErrorAction {
+  final String error;
+  FetchProductsErrorAction(this.error);
+}
+
+class FetchProductAction {
+  final int id;
+  FetchProductAction(this.id);
+}
+
+class FetchProductSuccessAction {
+  final Map<String, dynamic> product;
+  FetchProductSuccessAction(this.product);
+}
+
+class FetchProductErrorAction {
+  final String error;
+  FetchProductErrorAction(this.error);
+}
+```
+
+#### `recipe_actions.dart`
+
+```dart
+class FetchRecipesAction {}
+
+class FetchRecipesSuccessAction {
+  final List<dynamic> recipes;
+  FetchRecipesSuccessAction(this.recipes);
+}
+
+class FetchRecipesFailureAction {
+  final String error;
+  FetchRecipesFailureAction(this.error);
+}
+```
+
+---
+
+### 6. Combine Reducers
+
+Combine `ProductState` and `RecipeState` reducers into a single `AppState`.
+
+#### `app_reducer.dart`
+
+```dart
+import 'product_reducer.dart';
+import 'recipe_reducer.dart';
+import 'app_state.dart';
+
+AppState appReducer(AppState state, dynamic action) {
+  return AppState(
+    productState: productReducer(state.productState, action),
+    recipeState: recipeReducer(state.recipeState, action),
   );
 }
 ```
 
 ---
 
-### Usage
+### 7. Setup the `AppState`
 
-1. **Clone the Repository**: Download or clone this project to your local machine.
-2. **Install Dependencies**: Run `flutter pub get` to install all dependencies.
-3. **Run the App**: Use `flutter run` to start the app on your connected device or emulator.
-4. **Play with the Calculator**: Input numbers and operators to perform calculations. The expression will be shown on the top line, and the result will be displayed as you press numbers and operators.
+#### `app_state.dart`
+
+```dart
+import 'product_state.dart';
+import 'recipe_state.dart';
+
+class AppState {
+  final ProductState productState;
+  final RecipeState recipeState;
+
+  AppState({required this.productState, required this.recipeState});
+
+  factory AppState.initial() {
+    return AppState(
+      productState: ProductState.initial(),
+      recipeState: RecipeState.initial(),
+    );
+  }
+}
+```
 
 ---
 
-### Why Use Redux Here?
+### 8. Integrating in `main.dart`
 
-- **State Management**: Using Redux allows us to manage state in a scalable way. Every user interaction updates the state predictably, and the UI automatically responds to these state changes.
-- **Separation of Concerns**: Logic and UI are separated. The reducer takes care of business logic (e.g., calculating results), while the UI only displays the state.
+In the `main.dart` file, combine the reducers, middleware, and state. Here's an example of how to initialize the store and wrap your app:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_redux/flutter_redux.dart';
+import 'package:redux/redux.dart';
+import 'app_reducer.dart';
+import 'app_state.dart';
+import 'api_service.dart';
+import 'product_middleware.dart';
+import 'recipe_middleware.dart';
+
+void main() {
+  final apiService = ApiService();
+
+  final store = Store<AppState>(
+    appReducer,
+    initialState: AppState.initial(),
+    middleware: [
+      ...createProductMiddleware(apiService),
+      recipeMiddleware,
+    ],
+  );
+
+  runApp(StoreProvider<AppState>(
+    store: store,
+    child: MyApp(),
+  ));
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Redux Example',
+      home: ProductPage(),
+    );
+  }
+}
+```
+
+---
+
+### 9. Creating the UI
+
+#### `product_page.dart`
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_redux/flutter_redux.dart';
+import 'package:redux_example/actions/product_actions.dart';
+import 'package:redux_example/models/product_state.dart';
+import 'product_detail_page.dart';
+
+class ProductPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Product List")),
+     
+
+ body: StoreConnector<AppState, ProductState>(
+        converter: (store) => store.state.productState,
+        onInit: (store) => store.dispatch(FetchProductsAction()),
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state.error.isNotEmpty) {
+            return Center(child: Text('Error: ${state.error}'));
+          }
+
+          return ListView.builder(
+            itemCount: state.products.length,
+            itemBuilder: (context, index) {
+              final product = state.products[index];
+              return ListTile(
+                title: Text(product['title']),
+                subtitle: Text('Price: \$${product['price']}'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProductDetailPage(productId: product['id']),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+```
+
+---
+
+### 10. Conclusion
+
+By following this tutorial, you have successfully:
+- Implemented API integration for fetching products and recipes.
+- Structured your Redux app with separate states for different API data.
+- Used middleware to handle asynchronous API calls.
+- Combined multiple reducers into a unified `AppState`.
+  
+This concludes **Level 4** of the Redux tutorial series. In the next level, we’ll dive deeper into optimizing Redux patterns and possibly caching API data for offline support.
+
