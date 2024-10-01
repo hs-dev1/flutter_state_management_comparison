@@ -4,10 +4,11 @@ import 'package:redux/redux.dart';
 import 'package:redux_example/actions/product_actions.dart';
 import 'package:redux_example/models/product_state.dart';
 import '../api_service.dart';
+import '../models/app_state.dart';
 
-List<Middleware<ProductState>> createProductMiddleware(ApiService apiService) {
+List<Middleware<AppState>> createProductMiddleware(ApiService apiService) {
   return [
-    TypedMiddleware<ProductState, FetchProductsAction>(
+    TypedMiddleware<AppState, FetchProductsAction>(
       (store, action, next) async {
         next(action);
 
@@ -19,7 +20,7 @@ List<Middleware<ProductState>> createProductMiddleware(ApiService apiService) {
         }
       },
     ),
-    TypedMiddleware<ProductState, FetchProductAction>(
+    TypedMiddleware<AppState, FetchProductAction>(
       (store, action, next) async {
         next(action);
 

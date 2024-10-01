@@ -1,4 +1,3 @@
-
 import '../actions/product_actions.dart';
 
 // Define your state
@@ -14,6 +13,16 @@ class ProductState {
     required this.isLoading,
     required this.error,
   });
+
+  // Add a factory method for the initial state
+  factory ProductState.initial() {
+    return ProductState(
+      products: [],
+      selectedProduct: {},
+      isLoading: false,
+      error: '',
+    );
+  }
 
   ProductState copyWith({
     List<dynamic>? products,
