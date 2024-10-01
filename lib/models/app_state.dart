@@ -3,8 +3,6 @@ import 'package:redux_example/models/receipe_state.dart';
 
 import 'product_state.dart';
 // app_state.dart
-import 'package:redux_example/models/product_state.dart';
-import 'package:redux_example/models/receipe_state.dart';
 
 class AppState {
   final ProductState productState;

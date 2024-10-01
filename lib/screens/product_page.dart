@@ -7,6 +7,8 @@ import 'package:redux_example/screens/receipe_page.dart';
 import '../models/app_state.dart';
 
 class ProductPage extends StatelessWidget {
+  const ProductPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,7 +63,7 @@ class ProductPage extends StatelessWidget {
 class ProductDetailPage extends StatelessWidget {
   final int productId;
 
-  ProductDetailPage({required this.productId});
+  const ProductDetailPage({super.key, required this.productId});
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +77,7 @@ class ProductDetailPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state.error.isNotEmpty ?? false) {
+          if (state.error.isNotEmpty) {
             return Center(child: Text('Error: ${state.error}'));
           }
 

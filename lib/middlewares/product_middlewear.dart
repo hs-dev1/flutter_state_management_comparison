@@ -2,7 +2,6 @@
 
 import 'package:redux/redux.dart';
 import 'package:redux_example/actions/product_actions.dart';
-import 'package:redux_example/models/product_state.dart';
 import '../api_service.dart';
 import '../models/app_state.dart';
 

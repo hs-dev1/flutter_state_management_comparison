@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 import 'package:redux_example/middlewares/receipe_middleware.dart';
-import 'package:redux_example/models/product_state.dart';
 import 'package:redux_example/middlewares/product_middlewear.dart';
 import 'package:redux_example/screens/product_page.dart';
 import 'api_service.dart';
 import 'models/app_state.dart';
-import 'models/receipe_state.dart';
 
 void main() {
   final apiService = ApiService();
@@ -32,7 +30,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return StoreProvider<AppState>(
       store: store,
-      child: MaterialApp(
+      child: const MaterialApp(
         home: ProductPage(),
       ),
     );

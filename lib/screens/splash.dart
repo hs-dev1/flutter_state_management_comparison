@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:redux_example/screens/login.dart';
 import 'package:redux_example/screens/product_page.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,7 +13,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     // ignore: use_build_context_synchronously
-    Future.delayed(Durations.extralong4, () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProductPage())));
+    Future.delayed(Durations.extralong4, () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ProductPage())));
     super.initState();
   }
 
