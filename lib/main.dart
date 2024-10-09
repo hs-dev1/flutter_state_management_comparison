@@ -1,37 +1,112 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_redux/flutter_redux.dart';
-import 'package:redux/redux.dart';
-import 'package:redux_example/middlewares/receipe_middleware.dart';
-import 'package:redux_example/middlewares/product_middlewear.dart';
-import 'package:redux_example/screens/product_page.dart';
-import 'api_service.dart';
-import 'models/app_state.dart';
 
-void main() {
-  final apiService = ApiService();
-  final store = Store<AppState>(
-    appReducer,
-    initialState: AppState.initial(),
-    middleware: [
-      ...createProductMiddleware(apiService),
-      ...createRecipeMiddleware(apiService),
-    ],
-  );
-
-  runApp(MyApp(store: store));
-}
+void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
-  final Store<AppState> store;
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: LikeCommentPage(),
+    );
+  }
+}
 
-  const MyApp({super.key, required this.store});
+class LikeCommentPage extends StatefulWidget {
+  @override
+  _LikeCommentPageState createState() => _LikeCommentPageState();
+}
+
+class _LikeCommentPageState extends State<LikeCommentPage> {
+  bool isLiked = false;
+  int likeCount = 0;
+  List<String> comments = [];
+  TextEditingController commentController = TextEditingController();
+
+  void toggleLike() {
+    setState(() {
+      isLiked = !isLiked;
+      likeCount += isLiked ? 1 : -1;
+    });
+  }
+
+  void addComment() {
+    String comment = commentController.text;
+    if (comment.isNotEmpty) {
+      setState(() {
+        comments.add(comment);
+        commentController.clear();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return StoreProvider<AppState>(
-      store: store,
-      child: const MaterialApp(
-        home: ProductPage(),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Like and Comment App"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Like Button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    isLiked ? Icons.favorite : Icons.favorite_border,
+                    color: isLiked ? Colors.red : Colors.grey,
+                    size: 40,
+                  ),
+                  onPressed: toggleLike,
+                ),
+                SizedBox(width: 10),
+                Text(
+                  '$likeCount likes',
+                  style: TextStyle(fontSize: 20),
+                ),
+              ],
+            ),
+
+            // Comment Input Section
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: commentController,
+                      decoration: InputDecoration(
+                        labelText: "Add a comment",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: addComment,
+                    child: Text("Post"),
+                  ),
+                ],
+              ),
+            ),
+
+            // Display Comments
+            Expanded(
+              child: comments.isEmpty
+                  ? Center(child: Text("No comments yet."))
+                  : ListView.builder(
+                      itemCount: comments.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          title: Text(comments[index]),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
