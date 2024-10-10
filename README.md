@@ -1,431 +1,318 @@
+# Introduction to Provider: Flutter's Simple State Management Solution
 
+As Flutter developers, we often face the challenge of managing state effectively in our applications. Whether you're building a small app or a complex enterprise solution, proper state management is crucial for creating responsive, maintainable, and scalable Flutter applications.
 
-# Redux Tutorial - Level 4: API Integration with Products & Recipes
+In this article, we'll explore Provider, a popular and straightforward state management solution for Flutter. We'll cover the basics, walk through a simple example, and discuss best practices to help you get started with Provider in your Flutter projects.
 
-In this tutorial, we'll extend the Redux-based Flutter application by integrating API calls. We will implement two key features:
-- Fetching all products and a single product from an API.
-- Fetching a list of recipes from a different API.
+## Understanding State in Flutter
 
-The following APIs are used:
-- Get all products: `https://dummyjson.com/products`
-- Get a single product: `https://dummyjson.com/products/{id}`
-- Get all recipes: `https://dummyjson.com/recipes`
+Before we dive into Provider, let's briefly review what state means in the context of Flutter applications.
 
-## Overview
+### What is State?
 
-By the end of this level, you'll be able to:
-- Structure an application with two separate states (`ProductState` and `RecipeState`), reducers, and middleware.
-- Use `TypedMiddleware` to intercept actions and fetch data asynchronously using the `http` package.
-- Combine multiple reducers and connect them to your `AppState`.
-- Connect your UI to the Redux store and display data fetched from an API.
+In Flutter, state refers to any data that can change over time and affects the UI of your application. This could be anything from a simple boolean flag to a complex object representing user data.
 
-### App Structure
-The app will be structured into the following parts:
-- **State Management**: Redux will manage two pieces of state: `ProductState` and `RecipeState`.
-- **API Service**: A service to handle all API requests.
-- **Middleware**: We’ll use middleware to dispatch actions for fetching data asynchronously.
-- **Reducers**: Reducers will manage changes to `ProductState` and `RecipeState`.
-- **UI**: Display products and recipes using `StoreConnector` to listen to the Redux state.
+### Local vs. App-wide State
+
+State in Flutter can be categorized into two main types:
+
+1. **Local State**: This is state that's specific to a single widget. For example, whether a checkbox is checked or the current page in a PageView.
+
+2. **App-wide State**: This is state that needs to be shared across multiple widgets or throughout the entire application. Examples include user authentication status or items in a shopping cart.
+
+you could visit official site also: https://docs.flutter.dev/data-and-backend/state-mgmt/ephemeral-vs-app
+
+### Challenges with setState for Complex Apps
+
+For simple applications, Flutter's built-in `setState` method works well for managing state. However, as your app grows in complexity, relying solely on `setState` can lead to several issues:
+
+- **Prop Drilling**: Passing state through multiple layers of widgets becomes cumbersome. [**_Prop drilling_** is basically a situation when the same data is being sent at almost every level due to requirements in the final level.]
+- **Performance**: Unnecessary rebuilds of widgets can occur, impacting app performance.
+- **Code Maintainability**: As state management logic spreads across various widgets, the code becomes harder to maintain and understand.
+
+This is where dedicated state management solutions like Provider come in handy.
+
+## Enter Into Provider Concept
+
+Provider is a state management library for Flutter that offers a simple and efficient way to manage both local and app-wide state. It's built on top of Flutter's InheritedWidget, but provides a more developer-friendly API.
+
+### What is Provider?
+
+Provider acts as a wrapper around your data models, making them available to child widgets efficiently. It uses Flutter's built-in mechanisms for propagating information down the widget tree, ensuring that only the necessary parts of your UI are rebuilt when the state changes.
+
+### How Provider Solves State Management Issues
+
+Provider addresses common state management challenges by:
+
+1. **Centralizing State**: It allows you to keep your state in a central location, avoiding prop drilling.
+2. **Efficient Updates**: Only widgets that depend on changed state are rebuilt, improving performance.
+3. **Separation of Concerns**: Business logic can be separated from UI code, enhancing maintainability.
+
+### Benefits of Using Provider
+
+- **Simplicity**: Provider has a gentle learning curve, making it accessible for beginners.
+- **Flutter Integration**: It works seamlessly with Flutter's existing concepts and widgets.
+- **Flexibility**: Provider can be used for both simple and complex state management scenarios.
+- **Community Support**: As one of the most popular state management solutions in Flutter, it has extensive community support and resources.
+
+In the next section, we'll set up Provider in a Flutter project and create a simple counter example to demonstrate its basic usage.
 
 ---
 
-## Project Setup
+This introduction sets the stage for your article, explaining the importance of state management and introducing Provider as a solution. The next sections would involve coding examples and more detailed explanations of Provider's usage.
 
-### 1. Add Dependencies
+---
 
-In your `pubspec.yaml`, ensure the following dependencies are added:
+we will build a simple **Like and Comment** app using **Flutter** and the **Provider** package for state management. We’ll start with a heart-like button and a dynamic comment section where users can submit comments. By the end, you’ll understand how to manage and update state using Provider instead of `setState`.
+
+### **What You’ll Learn**:
+1. How to manage state using **Provider**.
+2. Building a UI that responds to user interactions (like button and comments).
+3. Handling dynamic lists in Flutter with **ListView**.
+
+### **Requirements**:
+- Basic understanding of Flutter.
+- Familiarity with `setState` for state management (helpful but not mandatory).
+- Flutter SDK installed.
+
+Let’s dive in!
+
+---
+
+### **Step 1: Setting Up the Project**
+
+First, create a new Flutter project if you don’t already have one:
+
+```bash
+flutter create like_comment_app
+cd like_comment_app
+```
+
+Next, add the **provider** package to your `pubspec.yaml` file under dependencies:
 
 ```yaml
 dependencies:
   flutter:
     sdk: flutter
-  flutter_redux: ^0.8.2
-  redux: ^5.0.0
-  http: ^0.13.3
+  provider: ^latest version
 ```
 
-Run `flutter pub get` to install the dependencies.
+Run `flutter pub get` to install the package.
 
 ---
 
-### 2. Define State Classes
+### **Step 2: Creating the Like and Comment Provider Class**
 
-We'll manage two separate pieces of state: one for products and another for recipes.
+We’ll start by creating a **ViewModel Class** that manages the like state and a list of comments. This VM will extend `ChangeNotifier`, which allows us to notify the UI whenever the state changes.
 
-#### `product_state.dart`
-
-```dart
-class ProductState {
-  final List<dynamic> products;
-  final Map<String, dynamic> selectedProduct;
-  final bool isLoading;
-  final String error;
-
-  ProductState({
-    required this.products,
-    required this.selectedProduct,
-    required this.isLoading,
-    required this.error,
-  });
-
-  factory ProductState.initial() {
-    return ProductState(
-      products: [],
-      selectedProduct: {},
-      isLoading: false,
-      error: '',
-    );
-  }
-}
-```
-
-#### `recipe_state.dart`
-
-```dart
-class RecipeState {
-  final List<dynamic> recipes;
-  final bool isLoading;
-  final String error;
-
-  RecipeState({
-    required this.recipes,
-    required this.isLoading,
-    required this.error,
-  });
-
-  factory RecipeState.initial() {
-    return RecipeState(
-      recipes: [],
-      isLoading: false,
-      error: '',
-    );
-  }
-}
-```
-
----
-
-### 3. Create API Service
-
-This service handles the API requests for products and recipes.
-
-#### `api_service.dart`
-
-```dart
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
-class ApiService {
-  final baseUrl = 'https://dummyjson.com';
-
-  Future<List<dynamic>> fetchAllProducts() async {
-    final response = await http.get(Uri.parse('$baseUrl/products'));
-    if (response.statusCode == 200) {
-      return json.decode(response.body)['products'];
-    } else {
-      throw Exception('Failed to load products');
-    }
-  }
-
-  Future<Map<String, dynamic>> fetchProduct(int id) async {
-    final response = await http.get(Uri.parse('$baseUrl/products/$id'));
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load product');
-    }
-  }
-
-  Future<List<dynamic>> fetchAllRecipes() async {
-    final response = await http.get(Uri.parse('$baseUrl/recipes'));
-    if (response.statusCode == 200) {
-      return json.decode(response.body)['recipes'];
-    } else {
-      throw Exception('Failed to load recipes');
-    }
-  }
-}
-```
-
----
-
-### 4. Set up Middleware
-
-Middleware will handle the asynchronous API requests by dispatching success or error actions.
-
-#### `product_middleware.dart`
-
-```dart
-import 'package:redux/redux.dart';
-import 'product_actions.dart';
-import 'product_state.dart';
-import '../api_service.dart';
-
-List<Middleware<ProductState>> createProductMiddleware(ApiService apiService) {
-  return [
-    TypedMiddleware<ProductState, FetchProductsAction>(
-      (store, action, next) async {
-        next(action);
-        try {
-          final products = await apiService.fetchAllProducts();
-          store.dispatch(FetchProductsSuccessAction(products));
-        } catch (error) {
-          store.dispatch(FetchProductsErrorAction(error.toString()));
-        }
-      },
-    ),
-    TypedMiddleware<ProductState, FetchProductAction>(
-      (store, action, next) async {
-        next(action);
-        try {
-          final product = await apiService.fetchProduct(action.id);
-          store.dispatch(FetchProductSuccessAction(product));
-        } catch (error) {
-          store.dispatch(FetchProductErrorAction(error.toString()));
-        }
-      },
-    ),
-  ];
-}
-```
-
-#### `recipe_middleware.dart`
-
-```dart
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:redux/redux.dart';
-import 'recipe_actions.dart';
-import 'recipe_state.dart';
-
-void recipeMiddleware(Store<RecipeState> store, dynamic action, NextDispatcher next) async {
-  if (action is FetchRecipesAction) {
-    try {
-      final response = await http.get(Uri.parse('https://dummyjson.com/recipes'));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body)['recipes'];
-        store.dispatch(FetchRecipesSuccessAction(data));
-      } else {
-        store.dispatch(FetchRecipesFailureAction('Failed to load recipes'));
-      }
-    } catch (error) {
-      store.dispatch(FetchRecipesFailureAction('Error: $error'));
-    }
-  }
-  next(action);
-}
-```
-
----
-
-### 5. Create Actions
-
-Define actions that will be dispatched for products and recipes.
-
-#### `product_actions.dart`
-
-```dart
-class FetchProductsAction {}
-
-class FetchProductsSuccessAction {
-  final List<dynamic> products;
-  FetchProductsSuccessAction(this.products);
-}
-
-class FetchProductsErrorAction {
-  final String error;
-  FetchProductsErrorAction(this.error);
-}
-
-class FetchProductAction {
-  final int id;
-  FetchProductAction(this.id);
-}
-
-class FetchProductSuccessAction {
-  final Map<String, dynamic> product;
-  FetchProductSuccessAction(this.product);
-}
-
-class FetchProductErrorAction {
-  final String error;
-  FetchProductErrorAction(this.error);
-}
-```
-
-#### `recipe_actions.dart`
-
-```dart
-class FetchRecipesAction {}
-
-class FetchRecipesSuccessAction {
-  final List<dynamic> recipes;
-  FetchRecipesSuccessAction(this.recipes);
-}
-
-class FetchRecipesFailureAction {
-  final String error;
-  FetchRecipesFailureAction(this.error);
-}
-```
-
----
-
-### 6. Combine Reducers
-
-Combine `ProductState` and `RecipeState` reducers into a single `AppState`.
-
-#### `app_reducer.dart`
-
-```dart
-import 'product_reducer.dart';
-import 'recipe_reducer.dart';
-import 'app_state.dart';
-
-AppState appReducer(AppState state, dynamic action) {
-  return AppState(
-    productState: productReducer(state.productState, action),
-    recipeState: recipeReducer(state.recipeState, action),
-  );
-}
-```
-
----
-
-### 7. Setup the `AppState`
-
-#### `app_state.dart`
-
-```dart
-import 'product_state.dart';
-import 'recipe_state.dart';
-
-class AppState {
-  final ProductState productState;
-  final RecipeState recipeState;
-
-  AppState({required this.productState, required this.recipeState});
-
-  factory AppState.initial() {
-    return AppState(
-      productState: ProductState.initial(),
-      recipeState: RecipeState.initial(),
-    );
-  }
-}
-```
-
----
-
-### 8. Integrating in `main.dart`
-
-In the `main.dart` file, combine the reducers, middleware, and state. Here's an example of how to initialize the store and wrap your app:
+Create a new file `like_comment_view_model.dart` inside the `lib` folder and add the following code:
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_redux/flutter_redux.dart';
-import 'package:redux/redux.dart';
-import 'app_reducer.dart';
-import 'app_state.dart';
-import 'api_service.dart';
-import 'product_middleware.dart';
-import 'recipe_middleware.dart';
+
+class LikeCommentViewModel extends ChangeNotifier {
+  bool _isLiked = false;
+  int _likeCount = 0;
+  List<String> _comments = [];
+
+  bool get isLiked => _isLiked;
+  int get likeCount => _likeCount;
+  List<String> get comments => _comments;
+
+  void toggleLike() {
+    _isLiked = !_isLiked;
+    _likeCount += _isLiked ? 1 : -1;
+    notifyListeners(); // Notify the UI to update
+  }
+
+  void addComment(String comment) {
+    if (comment.isNotEmpty) {
+      _comments.add(comment);
+      notifyListeners(); // Notify the UI to update
+    }
+  }
+}
+```
+
+### **Explanation**:
+- **_isLiked**: Keeps track of whether the user has liked the content or not.
+- **_likeCount**: Holds the number of likes.
+- **_comments**: A list of strings to store the comments.
+- We have two methods:
+  - **toggleLike()**: Toggles the liked state and adjusts the like count.
+  - **addComment()**: Adds a comment to the list and notifies the UI.
+
+Every time the state changes, `notifyListeners()` is called to let the UI know it needs to rebuild.
+
+---
+
+### **Step 3: Wrapping the App with Provider**
+
+Next, we need to make the `LikeCommentViewModel` available to the entire app. We’ll use the `ChangeNotifierProvider` to do this.
+
+Open `main.dart` and update it as follows:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'like_comment_model.dart'; // Import the model
 
 void main() {
-  final apiService = ApiService();
-
-  final store = Store<AppState>(
-    appReducer,
-    initialState: AppState.initial(),
-    middleware: [
-      ...createProductMiddleware(apiService),
-      recipeMiddleware,
-    ],
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => LikeCommentViewModel(),
+      child: MyApp(),
+    ),
   );
-
-  runApp(StoreProvider<AppState>(
-    store: store,
-    child: MyApp(),
-  ));
 }
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Redux Example',
-      home: ProductPage(),
+      home: LikeCommentPage(),
     );
   }
 }
 ```
 
+### **Explanation**:
+- We wrapped the app with `ChangeNotifierProvider`, which makes the `LikeCommentViewModel` available throughout the widget tree.
+- The `create` method instantiates the `LikeCommentViewModel` when the app starts.
+
 ---
 
-### 9. Creating the UI
+### **Step 4: Building the UI**
 
-#### `product_page.dart`
+Now, let’s build the UI for the app where users can toggle the like button and add comments.
+
+In `main.dart`, add the following code for the `LikeCommentPage` widget:
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_redux/flutter_redux.dart';
-import 'package:redux_example/actions/product_actions.dart';
-import 'package:redux_example/models/product_state.dart';
-import 'product_detail_page.dart';
+import 'package:provider/provider.dart';
+import 'like_comment_model.dart'; // Import the model
 
-class ProductPage extends StatelessWidget {
+class LikeCommentPage extends StatelessWidget {
+  final TextEditingController commentController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Product List")),
-     
+      appBar: AppBar(
+        title: Text("Like and Comment App"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Like Button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Consumer<LikeCommentViewModel>(
+                  builder: (context, model, child) {
+                    return IconButton(
+                      icon: Icon(
+                        model.isLiked
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: model.isLiked ? Colors.red : Colors.grey,
+                        size: 40,
+                      ),
+                      onPressed: () => model.toggleLike(),
+                    );
+                  },
+                ),
+                SizedBox(width: 10),
+                Consumer<LikeCommentViewModel>(
+                  builder: (context, model, child) {
+                    return Text(
+                      '${model.likeCount} likes',
+                      style: TextStyle(fontSize: 20),
+                    );
+                  },
+                ),
+              ],
+            ),
 
- body: StoreConnector<AppState, ProductState>(
-        converter: (store) => store.state.productState,
-        onInit: (store) => store.dispatch(FetchProductsAction()),
-        builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state.error.isNotEmpty) {
-            return Center(child: Text('Error: ${state.error}'));
-          }
-
-          return ListView.builder(
-            itemCount: state.products.length,
-            itemBuilder: (context, index) {
-              final product = state.products[index];
-              return ListTile(
-                title: Text(product['title']),
-                subtitle: Text('Price: \$${product['price']}'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProductDetailPage(productId: product['id']),
+            // Comment Input Section
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: commentController,
+                      decoration: InputDecoration(
+                        labelText: "Add a comment",
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                  );
+                  ),
+                  SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      Provider.of<LikeCommentViewModel>(context, listen: false)
+                          .addComment(commentController.text);
+                      commentController.clear();
+                    },
+                    child: Text("Post"),
+                  ),
+                ],
+              ),
+            ),
+
+            // Display Comments
+            Expanded(
+              child: Consumer<LikeCommentViewModel>(
+                builder: (context, model, child) {
+                  return model.comments.isEmpty
+                      ? Center(child: Text("No comments yet."))
+                      : ListView.builder(
+                          itemCount: model.comments.length,
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              title: Text(model.comments[index]),
+                            );
+                          },
+                        );
                 },
-              );
-            },
-          );
-        },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 ```
 
+### **Explanation**:
+- **Like Button**: We use the `Consumer` widget to rebuild the button when the liked state changes.
+- **Comment Input**: The `TextField` takes input, and the "Post" button adds the comment to the list. We use `Provider.of<LikeCommentViewModel>(context, listen: false)` to call the `addComment()` method.
+- **Comments Section**: We use `ListView.builder` to dynamically display comments.
+
 ---
 
-### 10. Conclusion
+### **Step 5: Running the App**
 
-By following this tutorial, you have successfully:
-- Implemented API integration for fetching products and recipes.
-- Structured your Redux app with separate states for different API data.
-- Used middleware to handle asynchronous API calls.
-- Combined multiple reducers into a unified `AppState`.
-  
-This concludes **Level 4** of the Redux tutorial series. In the next level, we’ll dive deeper into optimizing Redux patterns and possibly caching API data for offline support.
+Run the app with `flutter run`. You should now have a working app where:
+- Users can toggle the like button.
+- Comments can be added and displayed in real-time.
 
+---
+
+### **Conclusion**
+
+In this tutorial, you’ve learned how to manage state in a Flutter app using **Provider**. You’ve built a **Like and Comment** app that responds to user interactions, and you’ve seen how to update the UI based on state changes.
+
+Here’s a quick recap of what we’ve covered:
+- **ChangeNotifier**: For managing state and notifying the UI when the state changes.
+- **ChangeNotifierProvider**: To provide state to the entire widget tree.
+- **Consumer**: To listen for changes in the state and update the UI accordingly.
+
+Now, you can apply this pattern to more complex apps, and the power of state management with Provider will make your Flutter development much smoother.
+
+
+**Happy coding!**
