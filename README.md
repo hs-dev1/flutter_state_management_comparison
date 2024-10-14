@@ -1,318 +1,244 @@
-# Introduction to Provider: Flutter's Simple State Management Solution
+### Advanced Provider Techniques: Advanced State Management in a Shopping Cart App
+## Episode 2: Episode 2: Building a Shopping Cart App using MultiProvider, ChangeNotifierProvider, Consumer and ChangeNotifier.
 
-As Flutter developers, we often face the challenge of managing state effectively in our applications. Whether you're building a small app or a complex enterprise solution, proper state management is crucial for creating responsive, maintainable, and scalable Flutter applications.
+Welcome back to our Flutter State Management series! In our previous episode, we introduced the basics of Provider and built a simple Like and Comment app. Today, we're taking it up a notch by exploring advanced Provider techniques and building a more complex Shopping Cart app.
 
-In this article, we'll explore Provider, a popular and straightforward state management solution for Flutter. We'll cover the basics, walk through a simple example, and discuss best practices to help you get started with Provider in your Flutter projects.
+## 1. Quick Recap: Provider Basics
 
-## Understanding State in Flutter
+Before we dive into advanced concepts, let's quickly refresh our memory on the basics of Provider:
 
-Before we dive into Provider, let's briefly review what state means in the context of Flutter applications.
+- **Provider** is a state management solution that uses InheritedWidget under the hood.
+- It allows us to propagate and access data throughout our widget tree efficiently.
+- The basic setup involves wrapping our app with a `ChangeNotifierProvider` and using `Consumer` or `context.watch()` to listen to changes.
 
-### What is State?
+If you need a more detailed refresher, check out our [previous article](https://medium.com/@mhussnainshabbir/introduction-to-provider-flutters-simple-state-management-solution-cb0b258a175e).
 
-In Flutter, state refers to any data that can change over time and affects the UI of your application. This could be anything from a simple boolean flag to a complex object representing user data.
+## 2. Advanced Provider Concepts
 
-### Local vs. App-wide State
+### MultiProvider
 
-State in Flutter can be categorized into two main types:
-
-1. **Local State**: This is state that's specific to a single widget. For example, whether a checkbox is checked or the current page in a PageView.
-
-2. **App-wide State**: This is state that needs to be shared across multiple widgets or throughout the entire application. Examples include user authentication status or items in a shopping cart.
-
-you could visit official site also: https://docs.flutter.dev/data-and-backend/state-mgmt/ephemeral-vs-app
-
-### Challenges with setState for Complex Apps
-
-For simple applications, Flutter's built-in `setState` method works well for managing state. However, as your app grows in complexity, relying solely on `setState` can lead to several issues:
-
-- **Prop Drilling**: Passing state through multiple layers of widgets becomes cumbersome. [**_Prop drilling_** is basically a situation when the same data is being sent at almost every level due to requirements in the final level.]
-- **Performance**: Unnecessary rebuilds of widgets can occur, impacting app performance.
-- **Code Maintainability**: As state management logic spreads across various widgets, the code becomes harder to maintain and understand.
-
-This is where dedicated state management solutions like Provider come in handy.
-
-## Enter Into Provider Concept
-
-Provider is a state management library for Flutter that offers a simple and efficient way to manage both local and app-wide state. It's built on top of Flutter's InheritedWidget, but provides a more developer-friendly API.
-
-### What is Provider?
-
-Provider acts as a wrapper around your data models, making them available to child widgets efficiently. It uses Flutter's built-in mechanisms for propagating information down the widget tree, ensuring that only the necessary parts of your UI are rebuilt when the state changes.
-
-### How Provider Solves State Management Issues
-
-Provider addresses common state management challenges by:
-
-1. **Centralizing State**: It allows you to keep your state in a central location, avoiding prop drilling.
-2. **Efficient Updates**: Only widgets that depend on changed state are rebuilt, improving performance.
-3. **Separation of Concerns**: Business logic can be separated from UI code, enhancing maintainability.
-
-### Benefits of Using Provider
-
-- **Simplicity**: Provider has a gentle learning curve, making it accessible for beginners.
-- **Flutter Integration**: It works seamlessly with Flutter's existing concepts and widgets.
-- **Flexibility**: Provider can be used for both simple and complex state management scenarios.
-- **Community Support**: As one of the most popular state management solutions in Flutter, it has extensive community support and resources.
-
-In the next section, we'll set up Provider in a Flutter project and create a simple counter example to demonstrate its basic usage.
-
----
-
-This introduction sets the stage for your article, explaining the importance of state management and introducing Provider as a solution. The next sections would involve coding examples and more detailed explanations of Provider's usage.
-
----
-
-we will build a simple **Like and Comment** app using **Flutter** and the **Provider** package for state management. We’ll start with a heart-like button and a dynamic comment section where users can submit comments. By the end, you’ll understand how to manage and update state using Provider instead of `setState`.
-
-### **What You’ll Learn**:
-1. How to manage state using **Provider**.
-2. Building a UI that responds to user interactions (like button and comments).
-3. Handling dynamic lists in Flutter with **ListView**.
-
-### **Requirements**:
-- Basic understanding of Flutter.
-- Familiarity with `setState` for state management (helpful but not mandatory).
-- Flutter SDK installed.
-
-Let’s dive in!
-
----
-
-### **Step 1: Setting Up the Project**
-
-First, create a new Flutter project if you don’t already have one:
-
-```bash
-flutter create like_comment_app
-cd like_comment_app
-```
-
-Next, add the **provider** package to your `pubspec.yaml` file under dependencies:
-
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-  provider: ^latest version
-```
-
-Run `flutter pub get` to install the package.
-
----
-
-### **Step 2: Creating the Like and Comment Provider Class**
-
-We’ll start by creating a **ViewModel Class** that manages the like state and a list of comments. This VM will extend `ChangeNotifier`, which allows us to notify the UI whenever the state changes.
-
-Create a new file `like_comment_view_model.dart` inside the `lib` folder and add the following code:
+When our app grows, we often need to manage multiple states. This is where `MultiProvider` comes in handy. It allows us to provide multiple models without nesting Providers.
 
 ```dart
-import 'package:flutter/material.dart';
+MultiProvider(
+  providers: [
+    ChangeNotifierProvider(create: (context) => ProductProvider()),
+    ChangeNotifierProvider(create: (context) => CartProvider()),
+  ],
+  child: MyApp(),
+)
+```
 
-class LikeCommentViewModel extends ChangeNotifier {
-  bool _isLiked = false;
-  int _likeCount = 0;
-  List<String> _comments = [];
+### ProxyProvider
 
-  bool get isLiked => _isLiked;
-  int get likeCount => _likeCount;
-  List<String> get comments => _comments;
+`ProxyProvider` is used when a provider depends on other providers. It's particularly useful when you need to combine or transform data from multiple sources.
 
-  void toggleLike() {
-    _isLiked = !_isLiked;
-    _likeCount += _isLiked ? 1 : -1;
-    notifyListeners(); // Notify the UI to update
-  }
+```dart
+ProxyProvider<ProductProvider, TransformedProductProvider>(
+  update: (context, productProvider, previous) =>
+    TransformedProductProvider(productProvider),
+)
+```
 
-  void addComment(String comment) {
-    if (comment.isNotEmpty) {
-      _comments.add(comment);
-      notifyListeners(); // Notify the UI to update
-    }
-  }
+### ChangeNotifierProxyProvider
+
+This is a combination of `ChangeNotifierProvider` and `ProxyProvider`. It's useful when you need a listenable model that depends on other providers.
+
+```dart
+ChangeNotifierProxyProvider<ProductProvider, CartProvider>(
+  create: (context) => CartProvider(),
+  update: (context, productProvider, previousCartProvider) =>
+    previousCartProvider..update(productProvider),
+)
+```
+
+## 3. Building a Shopping Cart App
+
+Let's put these concepts into practice by building a shopping cart app. We'll create a product list, a cart, and manage their states using Provider.
+
+### Step 1: Create the Product Model and Provider
+
+First, let's define our `Product` class and `ProductProvider`:
+
+```dart
+class Product {
+  final String id;
+  final String name;
+  final double price;
+
+  Product({required this.id, required this.name, required this.price});
+}
+
+class ProductProvider extends ChangeNotifier {
+  List<Product> _products = [
+    Product(id: '1', name: 'Apple', price: 0.99),
+    Product(id: '2', name: 'Banana', price: 0.59),
+    Product(id: '3', name: 'Orange', price: 0.79),
+  ];
+
+  List<Product> get products => _products;
 }
 ```
 
-### **Explanation**:
-- **_isLiked**: Keeps track of whether the user has liked the content or not.
-- **_likeCount**: Holds the number of likes.
-- **_comments**: A list of strings to store the comments.
-- We have two methods:
-  - **toggleLike()**: Toggles the liked state and adjusts the like count.
-  - **addComment()**: Adds a comment to the list and notifies the UI.
+### Step 2: Implement the Cart Provider
 
-Every time the state changes, `notifyListeners()` is called to let the UI know it needs to rebuild.
-
----
-
-### **Step 3: Wrapping the App with Provider**
-
-Next, we need to make the `LikeCommentViewModel` available to the entire app. We’ll use the `ChangeNotifierProvider` to do this.
-
-Open `main.dart` and update it as follows:
+Now, let's create our `CartProvider`:
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'like_comment_model.dart'; // Import the model
+class CartProvider extends ChangeNotifier {
+  Map<String, int> _items = {};
 
+  Map<String, int> get items => _items;
+
+  void addItem(String productId) {
+    if (_items.containsKey(productId)) {
+      _items[productId] = (_items[productId] ?? 0) + 1;
+    } else {
+      _items[productId] = 1;
+    }
+    notifyListeners();
+  }
+
+  void removeItem(String productId) {
+    if (_items.containsKey(productId)) {
+      if (_items[productId] == 1) {
+        _items.remove(productId);
+      } else {
+        _items[productId] = (_items[productId] ?? 0) - 1;
+      }
+      notifyListeners();
+    }
+  }
+
+  int get totalItems => _items.values.fold(0, (sum, quantity) => sum + quantity);
+}
+```
+
+### Step 3: Set Up MultiProvider
+
+In your `main.dart`, set up the `MultiProvider`:
+
+```dart
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => LikeCommentViewModel(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ProductProvider()),
+        ChangeNotifierProvider(create: (context) => CartProvider()),
+      ],
       child: MyApp(),
     ),
   );
 }
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: LikeCommentPage(),
-    );
-  }
-}
 ```
 
-### **Explanation**:
-- We wrapped the app with `ChangeNotifierProvider`, which makes the `LikeCommentViewModel` available throughout the widget tree.
-- The `create` method instantiates the `LikeCommentViewModel` when the app starts.
+### Step 4: Create the Product List Screen
 
----
-
-### **Step 4: Building the UI**
-
-Now, let’s build the UI for the app where users can toggle the like button and add comments.
-
-In `main.dart`, add the following code for the `LikeCommentPage` widget:
+Now, let's create a screen to display our products:
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'like_comment_model.dart'; // Import the model
-
-class LikeCommentPage extends StatelessWidget {
-  final TextEditingController commentController = TextEditingController();
-
+class ProductListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Like and Comment App"),
+      appBar: AppBar(title: Text('Product List')),
+      body: Consumer<ProductProvider>(
+        builder: (context, productProvider, child) {
+          return ListView.builder(
+            itemCount: productProvider.products.length,
+            itemBuilder: (context, index) {
+              final product = productProvider.products[index];
+              return ListTile(
+                title: Text(product.name),
+                subtitle: Text('\$${product.price.toStringAsFixed(2)}'),
+                trailing: AddToCartButton(product: product),
+              );
+            },
+          );
+        },
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Like Button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Consumer<LikeCommentViewModel>(
-                  builder: (context, model, child) {
-                    return IconButton(
-                      icon: Icon(
-                        model.isLiked
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: model.isLiked ? Colors.red : Colors.grey,
-                        size: 40,
-                      ),
-                      onPressed: () => model.toggleLike(),
-                    );
-                  },
-                ),
-                SizedBox(width: 10),
-                Consumer<LikeCommentViewModel>(
-                  builder: (context, model, child) {
-                    return Text(
-                      '${model.likeCount} likes',
-                      style: TextStyle(fontSize: 20),
-                    );
-                  },
-                ),
-              ],
-            ),
+    );
+  }
+}
 
-            // Comment Input Section
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: commentController,
-                      decoration: InputDecoration(
-                        labelText: "Add a comment",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      Provider.of<LikeCommentViewModel>(context, listen: false)
-                          .addComment(commentController.text);
-                      commentController.clear();
-                    },
-                    child: Text("Post"),
-                  ),
-                ],
-              ),
-            ),
+class AddToCartButton extends StatelessWidget {
+  final Product product;
 
-            // Display Comments
-            Expanded(
-              child: Consumer<LikeCommentViewModel>(
-                builder: (context, model, child) {
-                  return model.comments.isEmpty
-                      ? Center(child: Text("No comments yet."))
-                      : ListView.builder(
-                          itemCount: model.comments.length,
-                          itemBuilder: (context, index) {
-                            return ListTile(
-                              title: Text(model.comments[index]),
-                            );
-                          },
-                        );
-                },
-              ),
-            ),
-          ],
-        ),
+  AddToCartButton({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CartProvider>(
+      builder: (context, cartProvider, child) {
+        return ElevatedButton(
+          child: Text('Add to Cart'),
+          onPressed: () => cartProvider.addItem(product.id),
+        );
+      },
+    );
+  }
+}
+```
+
+### Step 5: Implement the Cart Screen
+
+Finally, let's create a screen to display the cart:
+
+```dart
+class CartScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Cart')),
+      body: Consumer2<CartProvider, ProductProvider>(
+        builder: (context, cartProvider, productProvider, child) {
+          return ListView(
+            children: cartProvider.items.entries.map((entry) {
+              final product = productProvider.products.firstWhere((p) => p.id == entry.key);
+              return ListTile(
+                title: Text(product.name),
+                subtitle: Text('Quantity: ${entry.value}'),
+                trailing: IconButton(
+                  icon: Icon(Icons.remove),
+                  onPressed: () => cartProvider.removeItem(entry.key),
+                ),
+              );
+            }).toList(),
+          );
+        },
       ),
     );
   }
 }
 ```
 
-### **Explanation**:
-- **Like Button**: We use the `Consumer` widget to rebuild the button when the liked state changes.
-- **Comment Input**: The `TextField` takes input, and the "Post" button adds the comment to the list. We use `Provider.of<LikeCommentViewModel>(context, listen: false)` to call the `addComment()` method.
-- **Comments Section**: We use `ListView.builder` to dynamically display comments.
+## 4. Best Practices for Scaling Provider
 
----
+As your app grows, consider these best practices:
 
-### **Step 5: Running the App**
+1. **Organize your providers**: Keep your provider classes in a separate `providers` directory.
+2. **Use ProxyProvider for dependencies**: When one provider depends on another, use ProxyProvider to manage these relationships.
+3. **Minimize rebuilds**: Use `Consumer` widgets strategically to rebuild only the necessary parts of your UI.
+4. **Consider using `Provider.of` with `listen: false`** for one-time reads or in `initState`.
 
-Run the app with `flutter run`. You should now have a working app where:
-- Users can toggle the like button.
-- Comments can be added and displayed in real-time.
+## 5. Comparison with Other State Management Solutions
 
----
+While Provider is excellent for many use cases, it's worth noting other popular solutions:
 
-### **Conclusion**
+- **Riverpod**: An evolution of Provider, offering compile-time safety and easier testing.
+- **Bloc**: Uses streams and is great for complex apps with many business logic components.
+- **GetX**: Offers a complete solution including state management, route management, and dependency injection.
 
-In this tutorial, you’ve learned how to manage state in a Flutter app using **Provider**. You’ve built a **Like and Comment** app that responds to user interactions, and you’ve seen how to update the UI based on state changes.
+Provider shines in its simplicity and integration with Flutter, making it an excellent choice for small to medium-sized apps.
 
-Here’s a quick recap of what we’ve covered:
-- **ChangeNotifier**: For managing state and notifying the UI when the state changes.
-- **ChangeNotifierProvider**: To provide state to the entire widget tree.
-- **Consumer**: To listen for changes in the state and update the UI accordingly.
+## 6. Common Pitfalls and How to Avoid Them
 
-Now, you can apply this pattern to more complex apps, and the power of state management with Provider will make your Flutter development much smoother.
+1. **Overusing Provider**: Not everything needs to be in a provider. Use local state (`setState`) for widget-specific, non-shared state.
+2. **Forgetting to call `notifyListeners()`**: Always call this method when your provider's state changes.
+3. **Putting too much logic in build methods**: Keep your build methods clean and move complex logic to your provider classes.
 
+## Conclusion
 
-**Happy coding!**
+We've covered a lot of ground in this article, from advanced Provider concepts to building a practical shopping cart app. By now, you should have a solid understanding of how to use Provider effectively in more complex scenarios.
+
+In our next episode, we'll explore testing Provider-based code and dive into some more advanced state management patterns. Stay tuned!
