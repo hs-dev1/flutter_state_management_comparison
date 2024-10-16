@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => TaskProvider()),
-        ChangeNotifierProvider(create: (_) => CategoryProvider()),
-        ProxyProvider2<TaskProvider, CategoryProvider, List<Task>>(
-          update: (context, taskProvider, categoryProvider, _) {
-            return taskProvider.tasksByCategory(categoryProvider.selectedCategory);
-          },
-        ),
-      ],
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MyApp());
+}
+
+Future<Map<String, dynamic>> fetchProduct(int id) async {
+  final response = await http.get(Uri.parse('https://dummyjson.com/products/$id'));
+
+  if (response.statusCode == 200) {
+    return json.decode(response.body);
+  } else {
+    throw Exception('Failed to load product');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -24,193 +23,94 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Task Manager',
-      home: TaskListScreen(),
-    );
-  }
-}
-
-class Task {
-  String id;
-  String title;
-  bool isCompleted;
-  String categoryId;
-
-  Task({
-    required this.id,
-    required this.title,
-    this.isCompleted = false,
-    required this.categoryId,
-  });
-}
-
-class Category {
-  String id;
-  String name;
-
-  Category({required this.id, required this.name});
-}
-
-class TaskProvider extends ChangeNotifier {
-  final List<Task> _tasks = [];
-
-  List<Task> get tasks => _tasks;
-
-  void addTask(Task task) {
-    _tasks.add(task);
-    notifyListeners();
-  }
-
-  void removeTask(String taskId) {
-    _tasks.removeWhere((task) => task.id == taskId);
-    notifyListeners();
-  }
-
-  void toggleTaskCompletion(String taskId) {
-    final task = _tasks.firstWhere((task) => task.id == taskId);
-    task.isCompleted = !task.isCompleted;
-    notifyListeners();
-  }
-
-  List<Task> tasksByCategory(String? categoryId) {
-    if (categoryId == null) return _tasks;
-    return _tasks.where((task) => task.categoryId == categoryId).toList();
-  }
-}
-
-class CategoryProvider extends ChangeNotifier {
-  final List<Category> _categories = [
-    Category(id: '1', name: 'Work'),
-    Category(id: '2', name: 'Personal'),
-  ];
-
-  List<Category> get categories => _categories;
-
-  String? selectedCategory;
-  void selectCategory(String? categoryId) {
-    selectedCategory = categoryId;
-    notifyListeners();
-  }
-
-  void addCategory(Category category) {
-    _categories.add(category);
-    notifyListeners();
-  }
-
-  void removeCategory(String categoryId) {
-    _categories.removeWhere((category) => category.id == categoryId);
-    notifyListeners();
-  }
-}
-
-class TaskListScreen extends StatelessWidget {
-  final TextEditingController taskController = TextEditingController();
-
-  TaskListScreen({super.key});
-  String? selectedCategory;
-
-  @override
-  Widget build(BuildContext context) {
-    final taskProvider = Provider.of<TaskProvider>(context);
-    final categoryProvider = Provider.of<CategoryProvider>(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Task Manager'),
-        actions: [
-          DropdownButton<String>(
-            hint: const Text("Select Category"),
-            value: categoryProvider.selectedCategory,
-            items: categoryProvider.categories.map((category) {
-              return DropdownMenuItem(
-                value: category.id,
-                child: Text(category.name),
-              );
-            }).toList(),
-            onChanged: (categoryId) {
-              categoryProvider.selectCategory(categoryId);
-            },
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(26.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: taskController,
-              decoration: const InputDecoration(labelText: 'Enter Task'),
-            ),
-            DropdownButton<String>(
-              hint: const Text("Select Category"),
-              value: selectedCategory,
-              items: categoryProvider.categories.map((category) {
-                return DropdownMenuItem(
-                  value: category.id,
-                  child: Text(category.name),
-                );
-              }).toList(),
-              onChanged: (categoryId) {
-                selectedCategory = categoryId;
-              },
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (taskController.text.isNotEmpty && selectedCategory != null) {
-                  final newTask = Task(
-                    id: DateTime.now().toString(),
-                    title: taskController.text,
-                    categoryId: selectedCategory!,
-                  );
-                  taskProvider.addTask(newTask);
-                  taskController.clear();
-                  selectedCategory = null;
-                } else {
-                  debugPrint("Task title cannot be empty");
-                }
-              },
-              child: const Text('Add Task'),
-            ),
-            Expanded(
-              child: Consumer<List<Task>>(
-                builder: (context, tasks, child) {
-                  return ListView.builder(
-                    itemCount: tasks.length,
-                    itemBuilder: (context, index) {
-                      return TaskItem(taskId: tasks[index].id);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+      home: Scaffold(
+        appBar: AppBar(title: const Text('FutureProvider Example')),
+        body: ChangeNotifierProvider(
+          create: (_) => ProductProvider(),
+          child: const ProductDetails(),
         ),
       ),
     );
   }
 }
 
-class TaskItem extends StatelessWidget {
-  final String taskId;
+class ProductProvider extends ChangeNotifier {
+  int _currentId = 1;
+  Map<String, dynamic> _product = {'title': 'Loading...'};
 
-  const TaskItem({super.key, required this.taskId});
+  Map<String, dynamic> get product => _product;
+
+  Future<void> fetchProducta() async {
+    try {
+      _product = await fetchProduct(_currentId);
+      notifyListeners();
+    } catch (e) {
+      _product = {'title': 'Error loading product'};
+      notifyListeners();
+    }
+  }
+
+  void nextProduct() {
+    _currentId++;
+    fetchProducta();
+  }
+
+  void previousProduct() {
+    if (_currentId > 1) {
+      _currentId--;
+      fetchProducta();
+    }
+  }
+}
+
+class ProductDetails extends StatefulWidget {
+  const ProductDetails({super.key});
+
+  @override
+  State<ProductDetails> createState() => _ProductDetailsState();
+}
+
+class _ProductDetailsState extends State<ProductDetails> {
+  @override
+  void initState() {
+    final productProvider = Provider.of<ProductProvider>(context,listen: false);
+
+    productProvider.nextProduct();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Selector<TaskProvider, Task>(
-      selector: (_, provider) => provider.tasks.firstWhere((task) => task.id == taskId),
-      builder: (context, task, child) {
-        return ListTile(
-          title: Text(task.title),
-          trailing: Checkbox(
-            value: task.isCompleted,
-            onChanged: (value) {
-              Provider.of<TaskProvider>(context, listen: false).toggleTaskCompletion(taskId);
-            },
+    final productProvider = Provider.of<ProductProvider>(context);
+    final product = productProvider.product;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text('Product Title: ${product['title']}'),
+          Text('Price: \$${product['price']}'),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  productProvider.previousProduct();
+                },
+                child: const Text('Previous'),
+              ),
+              const SizedBox(width: 20),
+              ElevatedButton(
+                onPressed: () {
+                  productProvider.nextProduct();
+                },
+                child: const Text('Next'),
+              ),
+            ],
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
