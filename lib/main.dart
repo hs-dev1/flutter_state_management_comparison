@@ -73,7 +73,7 @@ class ProductDetails extends StatefulWidget {
 class _ProductDetailsState extends State<ProductDetails> {
   @override
   void initState() {
-    final productProvider = Provider.of<ProductProvider>(context,listen: false);
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
 
     productProvider.nextProduct();
     super.initState();

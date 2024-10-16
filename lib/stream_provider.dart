@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 Stream<int> priceStream() async* {
-  // Simulating price updates every 2 seconds
+  // Simulating price updates every 1 second
   for (int price = 100; price <= 1005; price++) {
     await Future.delayed(const Duration(seconds: 1));
     yield price;
@@ -44,7 +44,7 @@ class PriceUpdates extends StatelessWidget {
     final seconds = Provider.of<int>(context);
 
     return Center(
-      child: Text('wait , it will incerase the counter after each second. \n Seconds: $seconds'),
+      child: Text('Wait, it will increase the counter after each second. \n Seconds: $seconds'),
     );
   }
 }
